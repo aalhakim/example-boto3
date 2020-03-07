@@ -46,13 +46,64 @@ class S3Session(object):
     Create an AWS S3 client.
     """
 
-    def __init__(self):
+    def __init__(self, bucket_name, access_key, secret_key):
+        """ Initialise the S3Session object.
+        """
+        self.connect(bucket_name, access_key, secret_key)
+
+    def connect(self, bucket_name, access_key, secret_key):
+        """ Start an S3 session.
+
+        Parameters
+        ==========
+        bucket_name: <string>
+            Name of the bucket to connect to.
+
+        access_key: <string>
+            AWS Access Key with permission to access 'bucket_name'.
+
+        secret_key: <string>
+            AWS Secret Key with permission to access 'bucket_name'.
+
+        Returns
+        =======
+        Nothing is returned, but the object variables 'self.s3',
+        'self.bucket' and 'self.bucket_name' will be updated.
+        """
         session = Session()
-        self.s3 = session.resource("s3",
-                                   aws_access_key_id=S3_ACCESS_KEY,
-                                   aws_secret_access_key=S3_SECRET_KEY)
-        self.bucket_name = S3_BUCKET
-        self.bucket = self.s3.Bucket(self.bucket_name)
+        self.s3 = session.resource("s3",aws_access_key_id=access_key,
+                                   aws_secret_access_key=secret_key)
+        self.set_bucket(bucket_name)
+
+    def set_bucket(self, bucket_name):
+        """ Set which S3 bucket to access.
+
+        Parameters
+        ==========
+        bucket_name: <string>
+            Name of the bucket to connect to.
+
+        Returns:
+        Nothing is returned, but the object variables 'self.bucket' and
+        'self.bucket_name' will be updated.
+        """
+        self.bucket = self.s3.Bucket(bucket_name)
+        self.bucket_name = bucket_name
+
+    def get_bucket_name(self):
+        """
+        Return the name of the active bucket.
+
+        Returns
+        =======
+        <string>
+        Name of currently selected bucket (self.bucket.name).
+
+        Raises
+        ======
+        Nothing.
+        """
+        return self.bucket.name
 
     def get_size(self, s3_directory, filename):
         """
@@ -265,21 +316,21 @@ class S3Session(object):
         Parameters
         ==========
         s3_directory: <string>
-            A <str> of the path to the directory whose contents is
-            of interest. This should not include the bucket name.
+            Path to the directory whose contents is of interest. This
+            should not include the bucket name.
 
         Returns
         =======
         <list> of <strings>
-        A list of filenames located inside `self.bucket_name`/`s3_directory`/
+        A list of filenames located inside 'self.bucket_name/s3_directory'
         """
         return([s3_object.key for s3_object in self.bucket.objects.filter(Prefix=s3_directory)])
 
-    def get_file_names(self, s3_directory):
-        """
-        Retrieve only files immediately located inside `s3_directory`.
-        """
-        contents = self.get_contents(s3_directory)
+    # def get_file_names(self, s3_directory):
+    #     """
+    #     Retrieve only files immediately located inside `s3_directory`.
+    #     """
+    #     contents = self.get_contents(s3_directory)
 
     def get_all_content_names(self):
         """
@@ -350,37 +401,86 @@ class S3Session(object):
 
 ########################################################################
 if __name__ == "__main__":
-
     import time
-    TEST_FILE = "errors.log"
-    LOCAL_DIRECTORY = "./downloads/ed"
-    S3_DIRECTORY = "cc-tbnn/debug"
+    TEST_FILE = "test.txt"
+    LOCAL_DIRECTORY = "./downloads"
+    S3_DIRECTORY = ""
 
     # Create an Amazon Web Services S3 Client
-    s3_client = S3Session()
-    s3_client.get_content_names("cc-tbnn/debug")
+    s3_client = S3Session(S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)
+    # s3_client.get_content_names(S3_DIRECTORY)
 
 
-    # Test .download_file()
-    start = time.time()
-    r = s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .download_file: {}".format(end-start, r))
+    print("TESTS WHEN FILE DOES NOT EXIST\n  ", end="")
+    print(os.path.join(S3_BUCKET, S3_DIRECTORY, TEST_FILE))
 
-    # Test ._get_object()
+    # Test ._get_object(), file does not exist
     start = time.time()
     r = s3_client._get_object(S3_DIRECTORY, TEST_FILE)
     end = time.time()
     print("{:0<2.4f}s: ._get_object: {}".format(end-start, r))
 
-    # Test ._key_exists()
+    # Test ._key_exists(), file does not exist
     start = time.time()
     r = s3_client._key_exists(S3_DIRECTORY, TEST_FILE)
     end = time.time()
     print("{:0<2.4f}s: ._key_exists: {}".format(end-start, r))
 
-    # Test .get_size()
+    # Test .get_size(), file does not exist
     start = time.time()
     r = s3_client.get_size(S3_DIRECTORY, TEST_FILE)
     end = time.time()
     print("{:0<2.4f}s: .get_size: {}".format(end-start, r))
+
+    # Test .download_file(), file does not exist
+    start = time.time()
+    r = s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .download_file: {}".format(end-start, r))
+
+    # Test .delete_file(), file does not exist
+    start = time.time()
+    r = s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .delete_file: {}".format(end-start, r))
+
+
+    # -----
+    print("\nTESTS WHEN FILE EXISTS\n  ", end="")
+    print(os.path.join(S3_BUCKET, S3_DIRECTORY, TEST_FILE))
+
+    # Test .upload_file()
+    start = time.time()
+    r = s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .upload_file: {}".format(end-start, r))
+
+    # Test ._get_object(), file does not exist
+    start = time.time()
+    r = s3_client._get_object(S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: ._get_object: {}".format(end-start, r))
+
+    # Test ._key_exists(), file does not exist
+    start = time.time()
+    r = s3_client._key_exists(S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: ._key_exists: {}".format(end-start, r))
+
+    # Test .get_size(), file does not exist
+    start = time.time()
+    r = s3_client.get_size(S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .get_size: {}".format(end-start, r))
+
+    # Test .download_file(), file exists
+    start = time.time()
+    r = s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .download_file: {}".format(end-start, r))
+
+    # Test .delete_file(), file exists
+    start = time.time()
+    r = s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .delete_file: {}".format(end-start, r))
