@@ -118,13 +118,15 @@ class S3Session(object):
 
         File does not exist locally: <None>
         """
-        s3_object = self._get_object(s3_directory, filename)
+        # Create a filepath from the source directory and filename.
+        src_filepath = os.path.join(src_directory, filename).replace("\\", "/")
 
         # If the file exists in S3
-        if s3_object is not None:
+        if os.path.exists(src_filepath) is True:
 
-            # Create a filepath from the source directory and filename.
-            src_filepath = os.path.join(src_directory, filename).replace("\\", "/")
+            # Create a filepath from the destination directory and filename.
+            s3_filepath = os.path.join(s3_directory, filename).replace("\\", "/")
+            s3_object = self.s3.Object(self.bucket_name, s3_filepath)
 
             # Upload the target file to S3.
             try:
