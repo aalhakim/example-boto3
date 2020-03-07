@@ -103,7 +103,7 @@ class S3Session(object):
         ======
         Nothing.
         """
-        return self.bucket.name
+        return self.bucket_name
 
     def get_size(self, s3_directory, filename):
         """
