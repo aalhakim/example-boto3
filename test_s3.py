@@ -97,11 +97,7 @@ class S3Session(object):
         Returns
         =======
         <string>
-        Name of currently selected bucket (self.bucket.name).
-
-        Raises
-        ======
-        Nothing.
+        Name of currently selected bucket.
         """
         return self.bucket_name
 
@@ -137,6 +133,40 @@ class S3Session(object):
             size_in_bytes = None
 
         return size_in_bytes
+
+    def get_etag(self, s3_directory, filename):
+        """
+        Return the ETag (entity tag) of an S3 Object.
+
+        Description
+        ===========
+        Retrieve an S3 Object and return the result of the e_tag method.
+        The returned result will be an MD5 checksum for all files which
+        were uploaded in a single part.
+
+        Parameters
+        ==========
+        s3_directory: <string>
+            Filepath to the directory in S3 where 'filename' is found.
+
+        filename: <string>
+            Name of the file of interest, including file extension.
+
+        Returns
+        =======
+        If the file exists: <string>
+            The size of the S3 object in bytes.
+
+        If the file does not exist: <None>
+        """
+        s3_object = self._get_object(s3_directory, filename)
+
+        if s3_object is not None:
+            etag = s3_object.e_tag
+        else:
+            etag = None
+
+        return etag
 
     def upload_file(self, src_directory, s3_directory, filename):
         """
@@ -432,6 +462,12 @@ if __name__ == "__main__":
     end = time.time()
     print("{:0<2.4f}s: .get_size: {}".format(end-start, r))
 
+    # Test .get_etag(), file does not exist
+    start = time.time()
+    r = s3_client.get_etag(S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .get_etag: {}".format(end-start, r))
+
     # Test .download_file(), file does not exist
     start = time.time()
     r = s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
@@ -472,6 +508,12 @@ if __name__ == "__main__":
     r = s3_client.get_size(S3_DIRECTORY, TEST_FILE)
     end = time.time()
     print("{:0<2.4f}s: .get_size: {}".format(end-start, r))
+
+    # Test .get_etag(), file does not exist
+    start = time.time()
+    r = s3_client.get_etag(S3_DIRECTORY, TEST_FILE)
+    end = time.time()
+    print("{:0<2.4f}s: .get_etag: {}".format(end-start, r))
 
     # Test .download_file(), file exists
     start = time.time()
