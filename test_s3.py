@@ -339,7 +339,7 @@ class S3Session(object):
 
         return result
 
-    def get_content_names(self, s3_directory):
+    def get_contents(self, s3_directory, include_subdirectories=True):
         """
         Retrieve the contents located inside the specified directory.
 
@@ -349,20 +349,35 @@ class S3Session(object):
             Path to the directory whose contents is of interest. This
             should not include the bucket name.
 
+        include_subdirectories: <boolean>
+            Indicate whether files in sub-directories should also be
+            returned or not. If set to False then only files immediately
+            inside 's3_directory' will be returned.
+
         Returns
         =======
         <list> of <strings>
-        A list of filenames located inside 'self.bucket_name/s3_directory'
+        A list of filepaths located inside 'self.bucket_name/s3_directory'
         """
-        return([s3_object.key for s3_object in self.bucket.objects.filter(Prefix=s3_directory)])
+        # Return all contents extending from 's3_directory'
+        root = s3_directory.replace("\\", "/")
+        contents = [s3_object.key for s3_object in self.bucket.objects.filter(Prefix=root)]
 
-    # def get_file_names(self, s3_directory):
-    #     """
-    #     Retrieve only files immediately located inside `s3_directory`.
-    #     """
-    #     contents = self.get_contents(s3_directory)
+        # Return only contents found immediately in 's3_directory',
+        # including folder names.
+        if include_subdirectories is False:
 
-    def get_all_content_names(self):
+            root_items = []
+            for filepath in contents:
+                root_item = filepath.split("/")[1]
+                root_item_filepath = os.path.join(root, root_item).replace("\\", "/")
+                if root_item_filepath not in root_items:
+                    root_items.append(root_item_filepath)
+            contents = root_items
+
+        return contents
+
+    def get_all_contents(self):
         """
         Retrieve all contents inside the bucket.
 
@@ -371,7 +386,8 @@ class S3Session(object):
         <list> of <strings>
         A list of filenames located inside `self.bucket_name`.
         """
-        return [s3_object.key for s3_object in self.bucket.objects.all()]
+        contents = [s3_object.key for s3_object in self.bucket.objects.all()]
+        return contents
 
     def _key_exists(self, s3_directory, filename):
         """
@@ -434,7 +450,7 @@ if __name__ == "__main__":
     import time
     TEST_FILE = "test.txt"
     LOCAL_DIRECTORY = "./downloads"
-    S3_DIRECTORY = ""
+    S3_DIRECTORY = "cc-tbnn"
 
     # Create an Amazon Web Services S3 Client
     s3_client = S3Session(S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)
@@ -526,3 +542,9 @@ if __name__ == "__main__":
     r = s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
     end = time.time()
     print("{:0<2.4f}s: .delete_file: {}".format(end-start, r))
+
+    # Test .get_contents(), file exists
+    start = time.time()
+    r = s3_client.get_contents(S3_DIRECTORY, include_subdirectories=False)
+    end = time.time()
+    print("{:0<2.4f}s: .get_contents: {}".format(end-start, r))
