@@ -50,6 +50,7 @@ class S3Session(object):
         """ Initialise the S3Session object.
         """
         self.connect(bucket_name, access_key, secret_key)
+        self._initialise()
 
     def connect(self, bucket_name, access_key, secret_key):
         """ Start an S3 session.
@@ -100,6 +101,12 @@ class S3Session(object):
         Name of currently selected bucket.
         """
         return self.bucket_name
+
+    def _initialise(self):
+        """
+        Make a dud request to the bucket to initiliase the session.
+        """
+        self._key_exists("x", "y")
 
     def get_size(self, s3_directory, filename):
         """
