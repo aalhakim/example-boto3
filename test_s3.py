@@ -452,6 +452,14 @@ class S3Session(object):
         return result
 
 
+#######################################################################
+def timeit(func, *args):
+    start = time.time()
+    r = func(*args)
+    end = time.time()
+    print("{:0<2.4f}s: .{}: {}".format(end-start, func.__name__, r))
+
+
 ########################################################################
 if __name__ == "__main__":
     import time
@@ -463,45 +471,28 @@ if __name__ == "__main__":
     s3_client = S3Session(S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)
     # s3_client.get_content_names(S3_DIRECTORY)
 
+    
 
     print("TESTS WHEN FILE DOES NOT EXIST\n  ", end="")
     print(os.path.join(S3_BUCKET, S3_DIRECTORY, TEST_FILE))
 
     # Test ._get_object(), file does not exist
-    start = time.time()
-    r = s3_client._get_object(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: ._get_object: {}".format(end-start, r))
+    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
 
     # Test ._key_exists(), file does not exist
-    start = time.time()
-    r = s3_client._key_exists(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: ._key_exists: {}".format(end-start, r))
+    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
 
     # Test .get_size(), file does not exist
-    start = time.time()
-    r = s3_client.get_size(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .get_size: {}".format(end-start, r))
+    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
 
     # Test .get_etag(), file does not exist
-    start = time.time()
-    r = s3_client.get_etag(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .get_etag: {}".format(end-start, r))
+    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
 
     # Test .download_file(), file does not exist
-    start = time.time()
-    r = s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .download_file: {}".format(end-start, r))
+    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
 
     # Test .delete_file(), file does not exist
-    start = time.time()
-    r = s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .delete_file: {}".format(end-start, r))
+    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
 
 
     # -----
@@ -509,49 +500,25 @@ if __name__ == "__main__":
     print(os.path.join(S3_BUCKET, S3_DIRECTORY, TEST_FILE))
 
     # Test .upload_file()
-    start = time.time()
-    r = s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .upload_file: {}".format(end-start, r))
+    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
 
     # Test ._get_object(), file does not exist
-    start = time.time()
-    r = s3_client._get_object(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: ._get_object: {}".format(end-start, r))
+    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
 
     # Test ._key_exists(), file does not exist
-    start = time.time()
-    r = s3_client._key_exists(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: ._key_exists: {}".format(end-start, r))
+    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
 
     # Test .get_size(), file does not exist
-    start = time.time()
-    r = s3_client.get_size(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .get_size: {}".format(end-start, r))
+    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
 
     # Test .get_etag(), file does not exist
-    start = time.time()
-    r = s3_client.get_etag(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .get_etag: {}".format(end-start, r))
+    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
 
     # Test .download_file(), file exists
-    start = time.time()
-    r = s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .download_file: {}".format(end-start, r))
+    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
 
     # Test .delete_file(), file exists
-    start = time.time()
-    r = s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
-    end = time.time()
-    print("{:0<2.4f}s: .delete_file: {}".format(end-start, r))
+    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
 
     # Test .get_contents(), file exists
-    start = time.time()
-    r = s3_client.get_contents(S3_DIRECTORY, include_subdirectories=False)
-    end = time.time()
-    print("{:0<2.4f}s: .get_contents: {}".format(end-start, r))
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
