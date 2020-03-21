@@ -52,6 +52,8 @@ class S3Session(object):
         self.connect(bucket_name, access_key, secret_key)
         self._initialise()
 
+        self.most_recent_object = None
+
     def connect(self, bucket_name, access_key, secret_key):
         """ Start an S3 session.
 
@@ -108,7 +110,7 @@ class S3Session(object):
         """
         self._key_exists("x", "y")
 
-    def get_size(self, s3_directory, filename):
+    def get_size(self, s3_directory, filename, renew=True):
         """
         Return the size in bytes of an S3 Object.
 
@@ -125,14 +127,19 @@ class S3Session(object):
         filename: <string>
             Name of the file of interest, including file extension.
 
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
         Returns
         =======
         If the file exists: <integer>
             The size of the S3 object in bytes.
 
-        If the file does not exist: <None>
+        If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename)
+        s3_object = self._get_object(s3_directory, filename, renew)
 
         if s3_object is not None:
             size_in_bytes = s3_object.content_length
@@ -141,7 +148,7 @@ class S3Session(object):
 
         return size_in_bytes
 
-    def get_etag(self, s3_directory, filename):
+    def get_etag(self, s3_directory, filename, renew=True):
         """
         Return the ETag (entity tag) of an S3 Object.
 
@@ -159,14 +166,20 @@ class S3Session(object):
         filename: <string>
             Name of the file of interest, including file extension.
 
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
         Returns
         =======
         If the file exists: <string>
-            The size of the S3 object in bytes.
+            A character string, representing the MD5 checksum if the
+            file was uploaded in a single part.
 
-        If the file does not exist: <None>
+        If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename)
+        s3_object = self._get_object(s3_directory, filename, renew)
 
         if s3_object is not None:
             etag = s3_object.e_tag
@@ -174,6 +187,179 @@ class S3Session(object):
             etag = None
 
         return etag
+
+    def get_content_type(self, s3_directory, filename, renew=True):
+        """
+        Return the MIME type of the S3 Object.
+
+        Parameters
+        ==========
+        s3_directory: <string>
+            Filepath to the directory in S3 where 'filename' is found.
+
+        filename: <string>
+            Name of the file of interest, including file extension.
+
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
+        Returns
+        =======
+        If the file exists: <string>
+            Multipurpose internet mail extension (MIME) of the content
+            type.
+
+        If the file doesn't exist: <None>
+        """
+        s3_object = self._get_object(s3_directory, filename, renew)
+
+        if s3_object is not None:
+            content_type = s3_object.content_type
+        else:
+            content_type = None
+
+        return content_type
+
+    def get_version(self, s3_directory, filename, renew=True):
+        """
+        Return the version of the S3 Object.
+
+        Parameters
+        ==========
+        s3_directory: <string>
+            Filepath to the directory in S3 where 'filename' is found.
+
+        filename: <string>
+            Name of the file of interest, including file extension.
+
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
+        Returns
+        =======
+        If the file exists: <string>
+            A 32-character (alpha-numeric and special characters)
+            string.
+
+        If the file doesn't exist: <None>
+        """
+        s3_object = self._get_object(s3_directory, filename, renew)
+
+        if s3_object is not None:
+            version_id = s3_object.version_id
+        else:
+            version_id = None
+
+        return version_id
+
+    def get_expiration(self, s3_directory, filename, renew=True):
+        """
+        Return the expiration information of an S3 Object.
+
+        Description
+        ===========
+        If the object expiration is configured, the response includes
+        the expiry-date and rule-id key-value pairs providing object
+        expiration information. The value of the rule-id is URL
+        encoded.
+
+        Parameters
+        ==========
+        s3_directory: <string>
+            Filepath to the directory in S3 where 'filename' is found.
+
+        filename: <string>
+            Name of the file of interest, including file extension.
+
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
+        Returns
+        =======
+        If the file exists and expiration is configured: <string>
+            Unknown format - needs to be tested
+        If the file exists and expiration is not configured: <None>
+        If the file doesn't exist: <None>
+        """
+        s3_object = self._get_object(s3_directory, filename, renew)
+
+        if s3_object is not None:
+            expiration = s3_object.expiration
+        else:
+            expiration = None
+
+        return expiration
+
+    def get_expiry_date(self, s3_directory, filename, renew=True):
+        """
+        Return the date and time when the S3 Object will expire.
+
+        Parameters
+        ==========
+        s3_directory: <string>
+            Filepath to the directory in S3 where 'filename' is found.
+
+        filename: <string>
+            Name of the file of interest, including file extension.
+
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
+        Returns
+        =======
+        If the file exists and expiration is configured: <datetime>
+            Unknown format - needs to be tested
+        If the file exists and expiration is not configured: <None>
+        If the file doesn't exist: <None>
+        """
+        s3_object = self._get_object(s3_directory, filename, renew)
+
+        if s3_object is not None:
+            expiry_date = s3_object.expires
+        else:
+            expiry_date = None
+
+        return expiry_date
+
+    def get_modified_date(self, s3_directory, filename, renew=True):
+        """
+        Return the date and time when the S3 Object was last modified.
+
+        Parameters
+        ==========
+        s3_directory: <string>
+            Filepath to the directory in S3 where 'filename' is found.
+
+        filename: <string>
+            Name of the file of interest, including file extension.
+
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
+        Returns
+        =======
+        If the file exists: <datetime>
+        If the file doesn't exist: <None>
+        """
+        s3_object = self._get_object(s3_directory, filename, renew)
+
+        if s3_object is not None:
+            modified_date = s3_object.last_modified
+        else:
+            modified_date = None
+
+        return modified_date
+
 
     def upload_file(self, src_directory, s3_directory, filename):
         """
@@ -207,13 +393,13 @@ class S3Session(object):
         File does not exist locally: <None>
         """
         # Create a filepath from the source directory and filename.
-        src_filepath = os.path.join(src_directory, filename).replace("\\", "/")
+        src_filepath = posix_filepath(src_directory, filename)
 
         # If the file exists in S3
         if os.path.exists(src_filepath) is True:
 
             # Create a filepath from the destination directory and filename.
-            s3_filepath = os.path.join(s3_directory, filename).replace("\\", "/")
+            s3_filepath = posix_filepath(s3_directory, filename)
             s3_object = self.s3.Object(self.bucket_name, s3_filepath)
 
             # Upload the target file to S3.
@@ -269,16 +455,16 @@ class S3Session(object):
         if s3_object is not None:
 
             # Create a filepath from the source directory and filename.
-            dst_filepath = os.path.join(dst_directory, filename).replace("\\", "/")
+            dst_filepath = posix_filepath(dst_directory, filename)
 
             # If the file already exists copy the existing file contents
             # for data recovery.
-            if os.path.exists(dst_directory) is True:
+            if os.path.exists(dst_filepath) is True:
                 with open(dst_filepath, "rb") as rf:
                     backup_data = rf.read()
 
             # Create the destination filepath if it doesn't exist
-            else:
+            elif os.path.exists(dst_directory) is not True:
                 os.makedirs(dst_directory)
 
             # Download the target file.
@@ -367,7 +553,7 @@ class S3Session(object):
         A list of filepaths located inside 'self.bucket_name/s3_directory'
         """
         # Return all contents extending from 's3_directory'
-        root = s3_directory.replace("\\", "/")
+        root = posix_filepath(s3_directory)
         contents = [s3_object.key for s3_object in self.bucket.objects.filter(Prefix=root)]
 
         # Return only contents found immediately in 's3_directory',
@@ -377,7 +563,7 @@ class S3Session(object):
             root_items = []
             for filepath in contents:
                 root_item = filepath.split("/")[1]
-                root_item_filepath = os.path.join(root, root_item).replace("\\", "/")
+                root_item_filepath = posix_filepath(root, root_item)
                 if root_item_filepath not in root_items:
                     root_items.append(root_item_filepath)
             contents = root_items
@@ -406,7 +592,7 @@ class S3Session(object):
         exists = self._get_object(s3_directory, filename) is not None
         return exists
 
-    def _get_object(self, s3_directory, filename):
+    def _get_object(self, s3_directory, filename, renew=True):
         """
         Retrieve an S3 Object.
 
@@ -423,6 +609,11 @@ class S3Session(object):
         filename: <string>
             Name of the file of interest, including file extension.
 
+        renew: <boolean>
+            Set True to always request an object from S3. Set False to
+            only request an object if the key has changed from the
+            since the last _get_object() call.
+
         Returns
         =======
         If file is found: <boto3.resources.factory.s3.Object>
@@ -436,77 +627,97 @@ class S3Session(object):
         If an error other than HTTP 404 is returned, an exception will
         be raised.
         """
-        s3_filepath = os.path.join(s3_directory, filename).replace("\\", "/")
-        result = self.s3.Object(self.bucket_name, s3_filepath)
+        s3_filepath = posix_filepath(s3_directory, filename)
 
-        # Check if the object exists in S3.
-        try:
-            result.load()
-        except ClientError as err:
-            # ClientError: Object not found
-            if err.response["Error"]["Code"] != "404":
-                raise
-            debugLogger.debug("File not found: {}".format(err))
-            result = None
+        # Only retrieve new object information if forced to do so or if
+        # the key has changed.
+        if renew is False:
+            if self.most_recent_object is not None:
+                renew = s3_filepath != self.most_recent_object.key            
+
+        if renew is True:
+            result = self.s3.Object(self.bucket_name, s3_filepath)
+
+            # Check if the object exists in S3.
+            try:
+                result.load()
+            except ClientError as err:
+                # ClientError: Object not found
+                if err.response["Error"]["Code"] != "404":
+                    raise
+                debugLogger.debug("File not found: {}".format(err))
+                result = None
+
+        else:
+            result = self.most_recent_object
+
+        self.most_recent_object = result
 
         return result
 
 
 #######################################################################
+def posix_filepath(*args):
+    """
+    Return a normalised filepath format.
+
+    Description
+    ===========
+    Create a posix format filepath. All backslahes are replaced with
+    forward slashes which is the format used by AWS S3 keys.
+
+    Parameters
+    ==========
+    args: series of <strings>
+        Folder and file names in the order they should be concatenated.
+
+    Returns
+    =======
+    <string>: a filepath with only '/' for separators.
+
+    """
+    path = os.path.join(*args)
+
+    return path.replace("\\", "/")
+
+
 def timeit(func, *args):
     start = time.time()
     r = func(*args)
     end = time.time()
-    print("{:0<2.4f}s: .{}: {}".format(end-start, func.__name__, r))
+    print(" > {:0<2.4f}s: .{}: {}".format(end-start, func.__name__, r))
 
 
-########################################################################
-if __name__ == "__main__":
-    import time
-    TEST_FILE = "test.txt"
-    LOCAL_DIRECTORY = "./downloads"
-    S3_DIRECTORY = "cc-tbnn"
-
-    # Create an Amazon Web Services S3 Client
-    s3_client = S3Session(S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)
-    # s3_client.get_content_names(S3_DIRECTORY)
-
-    
-
-    print("TESTS WHEN FILE DOES NOT EXIST\n  ", end="")
-    print(os.path.join(S3_BUCKET, S3_DIRECTORY, TEST_FILE))
-
-    # Test ._get_object(), file does not exist
-    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
-
-    # Test ._key_exists(), file does not exist
-    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_size(), file does not exist
-    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_etag(), file does not exist
-    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
-
-    # Test .download_file(), file does not exist
-    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-
-    # Test .delete_file(), file does not exist
-    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
+def delete_local(filepath):
+    if os.path.exists(LOCAL_FILEPATH):
+        os.remove(LOCAL_FILEPATH)
 
 
-    # -----
-    print("\nTESTS WHEN FILE EXISTS\n  ", end="")
-    print(os.path.join(S3_BUCKET, S3_DIRECTORY, TEST_FILE))
+import datetime as dt
+def create_local(filepath):
+    with open(filepath, "w") as wf:
+        wf.write("This is a test file written by:\n {}\n at {}".format(__file__, dt.datetime.now()))
+
+
+def test_noLocal_noRemote(s3_client):
+    print("\nTESTS WHEN FILE DOES NOT EXIST LOCALLY OR REMOTELY")
+    delete_local(LOCAL_FILEPATH)
+    s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
 
     # Test .upload_file()
     timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
 
-    # Test ._get_object(), file does not exist
-    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)    
 
     # Test ._key_exists(), file does not exist
     timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
+
+    # Test ._get_object(), file does not exist
+    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
 
     # Test .get_size(), file does not exist
     timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
@@ -522,3 +733,161 @@ if __name__ == "__main__":
 
     # Test .get_contents(), file exists
     timeit(s3_client.get_contents, S3_DIRECTORY, False)
+
+
+def test_yesLocal_noRemote(s3_client):
+    print("\nTESTS WHEN FILE EXISTS LOCALLY BUT NOT REMOTELY")
+    create_local(LOCAL_FILEPATH)
+    s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
+
+    # Test ._key_exists(), file does not exist
+    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
+
+    # Test ._get_object(), file does not exist
+    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_size(), file does not exist
+    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_etag(), file does not exist
+    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
+
+    # Test .download_file(), file does not exist
+    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
+
+    # Test .delete_file(), file does not exist
+    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
+
+    # Test .upload_file()
+    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)    
+
+    # Test ._key_exists(), file does not exist
+    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
+
+    # Test ._get_object(), file does not exist
+    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_size(), file does not exist
+    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_etag(), file does not exist
+    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
+
+    # Test .delete_file(), file exists
+    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
+
+
+def test_noLocal_yesRemote(s3_client):
+    print("\nTESTS WHEN FILE EXISTS REMOTELY BUT NOT LOCALLY")
+    create_local(LOCAL_FILEPATH)
+    s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
+    delete_local(LOCAL_FILEPATH)
+
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
+
+    # Test .upload_file(), no file to upload
+    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)    
+
+    # Test ._key_exists(), file exists
+    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
+
+    # Test ._get_object(), file exists
+    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_size(), file exists
+    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_etag(), file exists
+    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
+
+    # Test .download_file(), create new file locally
+    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
+
+    # Test .delete_file(), file exists
+    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file exists
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
+
+
+def test_yesLocal_yesRemote(s3_client):
+    print("\nTESTS WHEN FILE EXISTS LOCALLY AND REMOTELY")
+    create_local(LOCAL_FILEPATH)
+    s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file should exist
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
+
+    # Test .upload_file(), file should be overwritten
+    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
+
+    # Test ._get_object(), file should exist
+    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
+
+    # Test ._key_exists(), file should exist
+    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_size(), file should exist
+    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_etag(), file should exist
+    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
+
+    # Test .download_file(), should be successful
+    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
+
+    # Test .delete_file(), should be successful
+    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
+
+    # Test .get_contents(), file no longer present
+    timeit(s3_client.get_contents, S3_DIRECTORY, False)
+
+
+########################################################################
+if __name__ == "__main__":
+    import time
+    TEST_FILE = "test.txt"
+    LOCAL_DIRECTORY = "./downloads"
+    S3_DIRECTORY = "cc-tbnn"
+
+    LOCAL_FILEPATH = posix_filepath(LOCAL_DIRECTORY, TEST_FILE)
+    S3_FILEPATH = posix_filepath(S3_BUCKET, S3_DIRECTORY, TEST_FILE)
+
+    print("\n Local:", LOCAL_FILEPATH)
+    print("Remote:", S3_FILEPATH, "\n")
+
+    # Create an Amazon Web Services S3 Client
+    s3_client = S3Session(S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)
+
+    create_local(LOCAL_FILEPATH)
+    s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
+    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
+    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE, False)
+    timeit(s3_client.get_content_type, S3_DIRECTORY, TEST_FILE, False)
+    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE, False)
+    timeit(s3_client.get_version, S3_DIRECTORY, TEST_FILE, False)
+    timeit(s3_client.get_expiration, S3_DIRECTORY, TEST_FILE, False)
+    timeit(s3_client.get_expiry_date, S3_DIRECTORY, TEST_FILE, False)
+    timeit(s3_client.get_modified_date, S3_DIRECTORY, TEST_FILE, False)
+    delete_local(LOCAL_FILEPATH)
+    s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
+
+    test_noLocal_noRemote(s3_client)
+    test_yesLocal_noRemote(s3_client)
+    test_noLocal_yesRemote(s3_client)
+    test_yesLocal_yesRemote(s3_client)
+    print("")
+
