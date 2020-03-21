@@ -676,6 +676,7 @@ def posix_filepath(*args):
     return path.replace("\\", "/")
 
 
+import time
 def timeit(func, *args):
     start = time.time()
     r = func(*args)
@@ -872,7 +873,7 @@ def test_objectAttributeDump(s3_client):
 
 ########################################################################
 if __name__ == "__main__":
-    import time
+
     TEST_FILE = "test.txt"
     LOCAL_DIRECTORY = "./downloads"
     S3_DIRECTORY = "cc-tbnn"
