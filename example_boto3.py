@@ -3,9 +3,14 @@
 """
 Example code to upload and download files from AWS S3.
 
-Docs
----
+Documentation:
 https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html
+
+Compatible with Python 3.x
+
+---
+Author: Ali Al-Hakim
+Last Updated: 21 March 2020
 """
 
 
@@ -676,219 +681,27 @@ def posix_filepath(*args):
     return path.replace("\\", "/")
 
 
-import time
-def timeit(func, *args):
-    start = time.time()
-    r = func(*args)
-    end = time.time()
-    print(" > {:0<2.4f}s: .{}: {}".format(end-start, func.__name__, r))
-
-
-def delete_local(filepath):
-    if os.path.exists(LOCAL_FILEPATH):
-        os.remove(LOCAL_FILEPATH)
-
-
-import datetime as dt
-def create_local(filepath):
-    with open(filepath, "w") as wf:
-        wf.write("This is a test file written by:\n {}\n at {}".format(__file__, dt.datetime.now()))
-
-
-#######################################################################
-# TEST FUNCTIONS
-def test_noLocal_noRemote(s3_client):
-    print("\nTESTS WHEN FILE DOES NOT EXIST LOCALLY OR REMOTELY")
-    delete_local(LOCAL_FILEPATH)
-    s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-    # Test .upload_file()
-    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)    
-
-    # Test ._key_exists(), file does not exist
-    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
-
-    # Test ._get_object(), file does not exist
-    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_size(), file does not exist
-    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_etag(), file does not exist
-    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
-
-    # Test .download_file(), file exists
-    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-
-    # Test .delete_file(), file exists
-    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-
-def test_yesLocal_noRemote(s3_client):
-    print("\nTESTS WHEN FILE EXISTS LOCALLY BUT NOT REMOTELY")
-    create_local(LOCAL_FILEPATH)
-    s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-    # Test ._key_exists(), file does not exist
-    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
-
-    # Test ._get_object(), file does not exist
-    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_size(), file does not exist
-    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_etag(), file does not exist
-    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
-
-    # Test .download_file(), file does not exist
-    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-
-    # Test .delete_file(), file does not exist
-    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
-
-    # Test .upload_file()
-    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)    
-
-    # Test ._key_exists(), file does not exist
-    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
-
-    # Test ._get_object(), file does not exist
-    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_size(), file does not exist
-    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_etag(), file does not exist
-    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
-
-    # Test .delete_file(), file exists
-    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-
-def test_noLocal_yesRemote(s3_client):
-    print("\nTESTS WHEN FILE EXISTS REMOTELY BUT NOT LOCALLY")
-    create_local(LOCAL_FILEPATH)
-    s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-    delete_local(LOCAL_FILEPATH)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-    # Test .upload_file(), no file to upload
-    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)    
-
-    # Test ._key_exists(), file exists
-    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
-
-    # Test ._get_object(), file exists
-    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_size(), file exists
-    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_etag(), file exists
-    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
-
-    # Test .download_file(), create new file locally
-    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-
-    # Test .delete_file(), file exists
-    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file exists
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-
-def test_yesLocal_yesRemote(s3_client):
-    print("\nTESTS WHEN FILE EXISTS LOCALLY AND REMOTELY")
-    create_local(LOCAL_FILEPATH)
-    s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file should exist
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-    # Test .upload_file(), file should be overwritten
-    timeit(s3_client.upload_file, LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-
-    # Test ._get_object(), file should exist
-    timeit(s3_client._get_object, S3_DIRECTORY, TEST_FILE)
-
-    # Test ._key_exists(), file should exist
-    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_size(), file should exist
-    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_etag(), file should exist
-    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE)
-
-    # Test .download_file(), should be successful
-    timeit(s3_client.download_file, S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)
-
-    # Test .delete_file(), should be successful
-    timeit(s3_client.delete_file, S3_DIRECTORY, TEST_FILE)
-
-    # Test .get_contents(), file no longer present
-    timeit(s3_client.get_contents, S3_DIRECTORY, False)
-
-
-def test_objectAttributeDump(s3_client):
-    print("\nDUMP AVAILABLE OBJECT ATTRIBUTE DATA")
-    create_local(LOCAL_FILEPATH)
-    s3_client.upload_file(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)
-    timeit(s3_client._key_exists, S3_DIRECTORY, TEST_FILE)
-    timeit(s3_client.get_size, S3_DIRECTORY, TEST_FILE, False)
-    timeit(s3_client.get_content_type, S3_DIRECTORY, TEST_FILE, False)
-    timeit(s3_client.get_etag, S3_DIRECTORY, TEST_FILE, False)
-    timeit(s3_client.get_version, S3_DIRECTORY, TEST_FILE, False)
-    timeit(s3_client.get_expiration, S3_DIRECTORY, TEST_FILE, False)
-    timeit(s3_client.get_expiry_date, S3_DIRECTORY, TEST_FILE, False)
-    timeit(s3_client.get_modified_date, S3_DIRECTORY, TEST_FILE, False)
-    delete_local(LOCAL_FILEPATH)
-    s3_client.delete_file(S3_DIRECTORY, TEST_FILE)
-
-
 ########################################################################
 if __name__ == "__main__":
 
     TEST_FILE = "test.txt"
     LOCAL_DIRECTORY = "./downloads"
-    S3_DIRECTORY = "cc-tbnn"
-
+    S3_DIRECTORY = "test-dir"
     LOCAL_FILEPATH = posix_filepath(LOCAL_DIRECTORY, TEST_FILE)
     S3_FILEPATH = posix_filepath(S3_BUCKET, S3_DIRECTORY, TEST_FILE)
 
-    print("\n Local:", LOCAL_FILEPATH)
-    print("Remote:", S3_FILEPATH, "\n")
+    print("\n Local: {}".format( LOCAL_FILEPATH))
+    print("Remote: {}\n".format(S3_FILEPATH))
 
     # Create an Amazon Web Services S3 Client
     s3_client = S3Session(S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)
 
-    test_noLocal_noRemote(s3_client)
-    test_yesLocal_noRemote(s3_client)
-    test_noLocal_yesRemote(s3_client)
-    test_yesLocal_yesRemote(s3_client)
-    test_objectAttributeDump(s3_client)
+    # Run some basic tests on the code.
+    from tests import BadlyWrittenTestClass
+    Tester = BadlyWrittenTestClass(s3_client, LOCAL_DIRECTORY, S3_BUCKET, S3_DIRECTORY, TEST_FILE)
+    Tester.test_noLocal_noRemote()
+    Tester.test_yesLocal_noRemote()
+    Tester.test_noLocal_yesRemote()
+    Tester.test_yesLocal_yesRemote()
+    Tester.test_objectAttributeDump()
     print("")
