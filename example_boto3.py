@@ -110,6 +110,41 @@ class S3Session(object):
         """
         self._key_exists("x", "y")
 
+    def get_attribute(self, attribute, s3_directory, filename, renew=True):
+
+        s3_object = self._get_object(s3_directory, filename, renew)
+        
+        if s3_object is not None:
+
+            if attribute == "content_length":
+                result = s3_object.content_length
+
+            elif attribute == "content_type":
+                result = s3_object.content_type
+
+            elif attribute == "e_tag":
+                result = s3_object.e_tag
+
+            elif attribute == "expiration":
+                result = s3_object.expiration
+                
+            elif attribute == "expires":
+                result = s3_object.expires
+
+            elif attribute == "last_modified":
+                result = s3_object.last_modified
+
+            elif attribute == "version_id":
+                result = s3_object.version_id
+
+            else:
+                result = None
+
+        else:
+            result = None
+
+        return result
+
     def get_size(self, s3_directory, filename, renew=True):
         """
         Return the size in bytes of an S3 Object.
@@ -128,24 +163,17 @@ class S3Session(object):
             Name of the file of interest, including file extension.
 
         renew: <boolean>
-            Set True to always request an object from S3. Set False to
-            only request an object if the key has changed from the
-            since the last _get_object() call.
+            Set True to always submit a server request for the S3
+            Object. Set False to only request an object if the key has
+            changed from the since the last _get_object() call.
 
         Returns
         =======
         If the file exists: <integer>
             The size of the S3 object in bytes.
-
         If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename, renew)
-
-        if s3_object is not None:
-            size_in_bytes = s3_object.content_length
-        else:
-            size_in_bytes = None
-
+        size_in_bytes = self.get_attribute("content_length", s3_directory, filename, renew)
         return size_in_bytes
 
     def get_etag(self, s3_directory, filename, renew=True):
@@ -167,25 +195,18 @@ class S3Session(object):
             Name of the file of interest, including file extension.
 
         renew: <boolean>
-            Set True to always request an object from S3. Set False to
-            only request an object if the key has changed from the
-            since the last _get_object() call.
+            Set True to always submit a server request for the S3
+            Object. Set False to only request an object if the key has
+            changed from the since the last _get_object() call.
 
         Returns
         =======
         If the file exists: <string>
             A character string, representing the MD5 checksum if the
             file was uploaded in a single part.
-
         If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename, renew)
-
-        if s3_object is not None:
-            etag = s3_object.e_tag
-        else:
-            etag = None
-
+        etag = self.get_attribute("e_tag", s3_directory, filename, renew)
         return etag
 
     def get_content_type(self, s3_directory, filename, renew=True):
@@ -201,25 +222,18 @@ class S3Session(object):
             Name of the file of interest, including file extension.
 
         renew: <boolean>
-            Set True to always request an object from S3. Set False to
-            only request an object if the key has changed from the
-            since the last _get_object() call.
+            Set True to always submit a server request for the S3
+            Object. Set False to only request an object if the key has
+            changed from the since the last _get_object() call.
 
         Returns
         =======
         If the file exists: <string>
             Multipurpose internet mail extension (MIME) of the content
             type.
-
         If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename, renew)
-
-        if s3_object is not None:
-            content_type = s3_object.content_type
-        else:
-            content_type = None
-
+        content_type = self.get_attribute("content_type", s3_directory, filename, renew)
         return content_type
 
     def get_version(self, s3_directory, filename, renew=True):
@@ -235,9 +249,9 @@ class S3Session(object):
             Name of the file of interest, including file extension.
 
         renew: <boolean>
-            Set True to always request an object from S3. Set False to
-            only request an object if the key has changed from the
-            since the last _get_object() call.
+            Set True to always submit a server request for the S3
+            Object. Set False to only request an object if the key has
+            changed from the since the last _get_object() call.
 
         Returns
         =======
@@ -247,13 +261,7 @@ class S3Session(object):
 
         If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename, renew)
-
-        if s3_object is not None:
-            version_id = s3_object.version_id
-        else:
-            version_id = None
-
+        version_id = self.get_attribute("version_id", s3_directory, filename, renew)
         return version_id
 
     def get_expiration(self, s3_directory, filename, renew=True):
@@ -276,9 +284,9 @@ class S3Session(object):
             Name of the file of interest, including file extension.
 
         renew: <boolean>
-            Set True to always request an object from S3. Set False to
-            only request an object if the key has changed from the
-            since the last _get_object() call.
+            Set True to always submit a server request for the S3
+            Object. Set False to only request an object if the key has
+            changed from the since the last _get_object() call.
 
         Returns
         =======
@@ -287,14 +295,8 @@ class S3Session(object):
         If the file exists and expiration is not configured: <None>
         If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename, renew)
-
-        if s3_object is not None:
-            expiration = s3_object.expiration
-        else:
-            expiration = None
-
-        return expiration
+        expiration_data = self.get_attribute("expiration", s3_directory, filename, renew)
+        return expiration_data
 
     def get_expiry_date(self, s3_directory, filename, renew=True):
         """
@@ -309,9 +311,9 @@ class S3Session(object):
             Name of the file of interest, including file extension.
 
         renew: <boolean>
-            Set True to always request an object from S3. Set False to
-            only request an object if the key has changed from the
-            since the last _get_object() call.
+            Set True to always submit a server request for the S3
+            Object. Set False to only request an object if the key has
+            changed from the since the last _get_object() call.
 
         Returns
         =======
@@ -320,13 +322,7 @@ class S3Session(object):
         If the file exists and expiration is not configured: <None>
         If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename, renew)
-
-        if s3_object is not None:
-            expiry_date = s3_object.expires
-        else:
-            expiry_date = None
-
+        expiry_date = self.get_attribute("expires", s3_directory, filename, renew)
         return expiry_date
 
     def get_modified_date(self, s3_directory, filename, renew=True):
@@ -342,24 +338,17 @@ class S3Session(object):
             Name of the file of interest, including file extension.
 
         renew: <boolean>
-            Set True to always request an object from S3. Set False to
-            only request an object if the key has changed from the
-            since the last _get_object() call.
+            Set True to always submit a server request for the S3
+            Object. Set False to only request an object if the key has
+            changed from the since the last _get_object() call.
 
         Returns
         =======
         If the file exists: <datetime>
         If the file doesn't exist: <None>
         """
-        s3_object = self._get_object(s3_directory, filename, renew)
-
-        if s3_object is not None:
-            modified_date = s3_object.last_modified
-        else:
-            modified_date = None
-
-        return modified_date
-
+        last_modified_date = self.get_attribute("last_modified", s3_directory, filename, renew)
+        return last_modified_date
 
     def upload_file(self, src_directory, s3_directory, filename):
         """
@@ -588,6 +577,7 @@ class S3Session(object):
 
         Returns
         =======
+        <boolean> True if it exists, False if it doesn't.
         """
         exists = self._get_object(s3_directory, filename) is not None
         return exists
@@ -647,11 +637,13 @@ class S3Session(object):
                     raise
                 debugLogger.debug("File not found: {}".format(err))
                 result = None
+                
+            self.most_recent_object = result
 
         else:
+            # Continue to use previous information because the key is
+            # the same as before and a force renew was not given.
             result = self.most_recent_object
-
-        self.most_recent_object = result
 
         return result
 
