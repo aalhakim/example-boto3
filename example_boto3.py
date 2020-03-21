@@ -695,7 +695,6 @@ def create_local(filepath):
         wf.write("This is a test file written by:\n {}\n at {}".format(__file__, dt.datetime.now()))
 
 
-
 #######################################################################
 # TEST FUNCTIONS
 def test_noLocal_noRemote(s3_client):
@@ -893,4 +892,3 @@ if __name__ == "__main__":
     test_yesLocal_yesRemote(s3_client)
     test_objectAttributeDump(s3_client)
     print("")
-
