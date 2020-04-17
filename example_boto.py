@@ -1,35 +1,48 @@
-#!python3
+#!python2
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 """
-Boto3 Example Code for Access to AWS S3
+Example code to upload and download files from AWS S3 using boto.
 
+Compatible with Python 2.7.
 
-Last Updated: 18 December 2019 (Ali Al-Hakim)
+---
+Authors: Ali Al-Hakim
+Last Updated: 21 March 2020
 """
 
-# Standard Library Imports
-import logging
-debugLogger = logging.getLogger(__name__)
-
-# Third-Party Library Imports
+# Standard library imports
 import os
 import hashlib
-from boto3.s3.connection import S3Connection
-from boto3.s3.bucket import Bucket as S3Bucket
-from boto3.s3.key import Key as S3Key
-from boto3.exception import S3ResponseError
+import logging
+import dotenv  # pip install python-dotenv
+
+# Third-party library imports
+from boto.s3.connection import S3Connection
+from boto.s3.bucket import Bucket as S3Bucket
+from boto.s3.key import Key as S3Key
+from boto.exception import S3ResponseError
 
 
-########################################################################
-
-# Select whether to display logging information or not
+#######################################################################
+# Setup logging
 USE_LOGGER = False
+if USE_LOGGER is True:
+    import logging
+    debugLogger = logging.getLogger(__name__)
+
+
+#######################################################################
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
+S3_ACCESS_KEY = os.environ["S3_ACCESS_KEY"]
+S3_SECRET_KEY = os.environ["S3_SECRET_KEY"]
+S3_BUCKET = os.environ["S3_BUCKET"]
 
 
 ########################################################################
-class AmazonS3(object):
+class AWSS3(object):
     def __init__(self, access_key, secret_key, bucket, verbose=False):
         self.verbose = verbose
         self.connect(access_key, secret_key, bucket)
@@ -513,7 +526,7 @@ class AmazonS3(object):
         # If the destination directory does not exist, create it and
         # download the file into it.
         else:
-            _print("WARN", "DST_DIR='{}'".format(dst_dir))
+            print("DST_DIR='{}'".format(dst_dir))
             os.makedirs(dst_dir)
             result = self._download(dst_filepath, version)
 
@@ -697,55 +710,73 @@ def _print(level, string):
         print("{}: {}".format(level, string))
 
 
+#######################################################################
+def posix_filepath(*args):
+    """
+    Return a normalised filepath format.
+
+    Description
+    ===========
+    Create a posix format filepath. All backslahes are replaced with
+    forward slashes which is the format used by AWS S3 keys.
+
+    Parameters
+    ==========
+    args: series of <strings>
+        Folder and file names in the order they should be concatenated.
+
+    Returns
+    =======
+    <string>: a filepath with only '/' for separators.
+
+    """
+    path = os.path.join(*args)
+
+    return path.replace("\\", "/")
+
+
+import datetime as dt
+def create_local(filepath):
+    if not os.path.exists(filepath):
+        os.makedirs(os.path.dirname(filepath))
+
+    with open(filepath, "w") as wf:
+        wf.write("This is a test file written by:\n {}\n at {}".format(__file__, dt.datetime.now()))
+
+
+def delete_local(filepath):
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
+
+
 ########################################################################
 if __name__ == "__main__":
 
-    import dotenv  # pip install python-dotenv
-    dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+    s3_client = AWSS3(S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, verbose=True)
 
-    # Collect login details from .env file
-    S3_ACCESS_KEY = os.environ["S3_ACCESS_KEY"]
-    S3_SECRET_KEY = os.environ["S3_SECRET_KEY"]
-    S3_BUCKET = os.environ["S3_BUCKET"]
+    TEST_FILE = "test.txt"
+    LOCAL_DIRECTORY = "./s3files"
+    S3_DIRECTORY = "test-dir"
+    LOCAL_FILEPATH = posix_filepath(LOCAL_DIRECTORY, TEST_FILE)
+    S3_FILEPATH = posix_filepath(S3_BUCKET, S3_DIRECTORY, TEST_FILE)
+
+    print("\n Local: {}".format( LOCAL_FILEPATH))
+    print("Remote: {}\n".format(S3_FILEPATH))
 
 
-    AmazonS3Handler = AmazonS3(S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET, verbose=True)
+    create_local(LOCAL_FILEPATH)                                        # Create local
+    s3_client.upload(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)          # Upload
+    s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)   # Download
+    s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)   # Overwrite local
+    s3_client.upload(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)          # Overwrite remote
 
-    # Find available keys at bucket location
-    keys = AmazonS3Handler.get_all_keys()
-    files = AmazonS3Handler.get_all_keynames()
-    print("{} files found in {}\n".format(len(files), AmazonS3Handler.get_bucket_name()))
-
-    for index in range(len(keys)):
-        print(">> KEY  {}".format(keys[index]))
-        print(">> FILE {}{}".format(" "*28, files[index]))
-    print("")
-
-    index = 0
-    filename = os.path.basename(files[index])
-    local = os.path.dirname(files[index])
-    server = local
-
-    if local == "":
-        local = "./"
-
-    # Test Download and Upload functionality
-    print("Download...              ", end="")
-    AmazonS3Handler.download_file(server, local, filename)
-    print("Upload...                ", end="")
-    AmazonS3Handler.upload(local, os.path.join(server, "test"), filename)
-
-    print("Download again...        ", end="")
-    AmazonS3Handler.download_file(server, local, filename)
-    print("Upload again...          ", end="")
-    AmazonS3Handler.upload(local, os.path.join(server, "test"), filename)
-
-    print("Modify file and upload...", end="")
-    with open(os.path.join(local, filename), "a") as wf:
+    with open(LOCAL_FILEPATH, "a") as wf:                               # Modify local
         wf.write("Hello, my name is Waldo. Or is it Wally?")
-    AmazonS3Handler.upload(local, os.path.join(server, "test"), filename)
-    print("Download modified file...", end="")
-    AmazonS3Handler.download_file(server, local, filename)
-    print("Removing test file...    ", end="")
-    os.remove(os.path.join(local, filename))
-    print("complete")
+
+    s3_client.upload(LOCAL_DIRECTORY, S3_DIRECTORY, TEST_FILE)          # Upload modified
+    s3_client.download_file(S3_DIRECTORY, LOCAL_DIRECTORY, TEST_FILE)   # Download modified
+    s3_client.delete(S3_DIRECTORY, TEST_FILE)                           # Delete remote
+    delete_local(LOCAL_FILEPATH)                                        # Delete local
+
+    print("complete\n")
