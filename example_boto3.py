@@ -18,11 +18,17 @@ Last Updated: 21 March 2020
 import os
 import logging
 
-# Logger configuration
+# Logger configuration (from dictionary)
 if __name__ == "__main__":
+    from logger.logging_config import config
     import logging.config
-    logger_config = "logging_{}.conf".format(os.name)
-    logging.config.fileConfig(os.path.join(os.path.dirname(__file__), "logger", logger_config))
+    logging.config.dictConfig(config)
+
+# # Logger configuration (from file)
+# if __name__ == "__main__":
+#     import logging.config
+#     logger_config = "logging_{}.conf".format(os.name)
+#     logging.config.fileConfig(os.path.join(os.path.dirname(__file__), "logger", logger_config))
 
 # Control which modules are allowed to the application log files. This
 # will block all logs except Critical logs from the defined group.
