@@ -3,6 +3,10 @@
 """
 Example code to upload and download files from AWS S3.
 
+Credential Management:
+    Read the information in README.md on how to setup your computer to
+    securely and conveniently manage credentials.
+
 Documentation:
 https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html
 
@@ -16,6 +20,7 @@ Last Updated: 21 March 2020
 
 # Standard library imports
 import os
+import sys
 import logging
 
 # Logger configuration (from dictionary)
@@ -39,15 +44,14 @@ debugLogger = logging.getLogger(__name__)
 # Third-party library imports
 from boto3.session import Session
 from botocore.exceptions import ClientError
+from botocore.exceptions import ProfileNotFound
 
 
 ########################################################################
 import dotenv  # pip install python-dotenv
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-# Collect login details from .env file
-S3_ACCESS_KEY = os.environ["S3_ACCESS_KEY"]
-S3_SECRET_KEY = os.environ["S3_SECRET_KEY"]
+# # Collect details from .env file
 S3_BUCKET = os.environ["S3_BUCKET"]
 
 
@@ -57,15 +61,25 @@ class S3Session(object):
     Create an AWS S3 client.
     """
 
-    def __init__(self, bucket_name, access_key, secret_key):
+    def __init__(self, bucket_name, profile_name=None):
         """ Initialise the S3Session object.
+
+        Parameters
+        ==========
+        bucket_name: <string>
+            Name of the bucket to connect to.
+
+        profile_name: <string>
+            Name of the profile to use for account access. If None the
+            default credentials will be used.
+
         """
-        self.connect(bucket_name, access_key, secret_key)
+        self.connect(bucket_name, profile_name)
         self._initialise()
 
         self.most_recent_object = None
 
-    def connect(self, bucket_name, access_key, secret_key):
+    def connect(self, bucket_name, profile_name=None):
         """ Start an S3 session.
 
         Parameters
@@ -73,20 +87,25 @@ class S3Session(object):
         bucket_name: <string>
             Name of the bucket to connect to.
 
-        access_key: <string>
-            AWS Access Key with permission to access 'bucket_name'.
-
-        secret_key: <string>
-            AWS Secret Key with permission to access 'bucket_name'.
+        profile_name: <string>
+            Name of the profile to use for account access. If None the
+            default credentials will be used.
 
         Returns
         =======
         Nothing is returned, but the object variables 'self.s3',
         'self.bucket' and 'self.bucket_name' will be updated.
         """
-        session = Session()
-        self.s3 = session.resource("s3",aws_access_key_id=access_key,
-                                   aws_secret_access_key=secret_key)
+        debugLogger.info("Using profile: {}".format("default" if profile_name is None else profile_name))
+
+        try:
+            session = Session(profile_name=profile_name)
+            debugLogger.info("  Session established.")
+        except ProfileNotFound as err:
+            debugLogger.error(err)
+            sys.exit(1)
+
+        self.s3 = session.resource("s3")
         self.set_bucket(bucket_name)
 
     def set_bucket(self, bucket_name):
@@ -101,6 +120,7 @@ class S3Session(object):
         Nothing is returned, but the object variables 'self.bucket' and
         'self.bucket_name' will be updated.
         """
+        debugLogger.info("Accessing bucket: {}".format(bucket_name))
         self.bucket = self.s3.Bucket(bucket_name)
         self.bucket_name = bucket_name
 
@@ -119,7 +139,12 @@ class S3Session(object):
         """
         Make a dud request to the bucket to initiliase the session.
         """
-        self._key_exists("x", "y")
+        try:
+            self._key_exists("x", "y")
+        except ClientError as err:
+            debugLogger.error(err)
+            debugLogger.info("  Are you certain your access credentials are valid?")
+            sys.exit(1)
 
     def _get_object(self, s3_directory, filename, renew=True):
         """
@@ -162,7 +187,7 @@ class S3Session(object):
         # the key has changed.
         if renew is False:
             if self.most_recent_object is not None:
-                renew = s3_filepath != self.most_recent_object.key            
+                renew = s3_filepath != self.most_recent_object.key
 
         if renew is True:
             result = self.s3.Object(self.bucket_name, s3_filepath)
@@ -293,8 +318,8 @@ class S3Session(object):
             # Upload the target file to S3.
             try:
                 s3_object.upload_file(src_filepath)
-            except Exception as err:
-                debugLogger.error("Upload file failed.", err)
+            except ClientError as err:
+                debugLogger.warning(err)
                 result = False
             else:
                 result = True
@@ -358,9 +383,9 @@ class S3Session(object):
             # Download the target file.
             try:
                 s3_object.download_file(dst_filepath)
-            except Exception as err:
+            except ClientError as err:
                 result = False
-                debugLogger.error("Download file failed.", err)
+                debugLogger.warning(err)
                 with open(dst_filepath, "wb") as wf:
                     wf.write(backup_data)
             else:
@@ -408,8 +433,8 @@ class S3Session(object):
             # Delete the target file.
             try:
                 response = s3_object.delete()
-            except Exception as err:
-                debugLogger.error("Delete file failed.", err)
+            except ClientError as err:
+                debugLogger.warning(err)
                 result = False
             else:
                 result = True
@@ -424,7 +449,7 @@ class S3Session(object):
     def get_attribute(self, attribute, s3_directory, filename, renew=True):
 
         s3_object = self._get_object(s3_directory, filename, renew)
-        
+
         if s3_object is not None:
 
             if attribute == "content_length":
@@ -438,7 +463,7 @@ class S3Session(object):
 
             elif attribute == "expiration":
                 result = s3_object.expiration
-                
+
             elif attribute == "expires":
                 result = s3_object.expires
 
@@ -669,7 +694,7 @@ def posix_filepath(*args):
 
     Description
     ===========
-    Create a posix format filepath. All backslahes are replaced with
+    Create a posix format filepath. All backslashes are replaced with
     forward slashes which is the format used by AWS S3 keys.
 
     Parameters
@@ -691,16 +716,16 @@ def posix_filepath(*args):
 if __name__ == "__main__":
 
     TEST_FILE = "test.txt"
-    LOCAL_DIRECTORY = "./downloads"
+    LOCAL_DIRECTORY = "./s3files"
     S3_DIRECTORY = "test-dir"
     LOCAL_FILEPATH = posix_filepath(LOCAL_DIRECTORY, TEST_FILE)
     S3_FILEPATH = posix_filepath(S3_BUCKET, S3_DIRECTORY, TEST_FILE)
 
-    print("\n Local: {}".format( LOCAL_FILEPATH))
+    print("\n Local: {}".format(LOCAL_FILEPATH))
     print("Remote: {}\n".format(S3_FILEPATH))
 
     # Create an Amazon Web Services S3 Client
-    s3_client = S3Session(S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY)
+    s3_client = S3Session(S3_BUCKET)
 
     # Run some basic tests on the code.
     from tests import BadlyWrittenTestClass

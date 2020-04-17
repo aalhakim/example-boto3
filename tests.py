@@ -22,6 +22,10 @@ def timeit(func, *args):
 
 
 def create_local(filepath):
+    branch = os.path.dirname(filepath)
+    if not os.path.exists(branch):
+        os.makedirs(branch)
+
     with open(filepath, "w") as wf:
         wf.write("This is a test file written by:\n {}\n at {}".format(__file__, dt.datetime.now()))
 
@@ -36,7 +40,7 @@ def delete_local(filepath):
 class BadlyWrittenTestClass(object):
 
     def __init__(self, s3_client, local_directory, s3_bucket, s3_directory, test_file):
-        
+
         self.s3_client = s3_client
         self.local_dir = local_directory
         self.s3_bucket = s3_bucket
@@ -57,7 +61,7 @@ class BadlyWrittenTestClass(object):
         timeit(self.s3_client.upload_file, self.local_dir, self.s3_dir, self.test_file)
 
         # Test .get_contents(), file exists
-        timeit(self.s3_client.get_contents, self.s3_dir, False)    
+        timeit(self.s3_client.get_contents, self.s3_dir, False)
 
         # Test ._key_exists(), file does not exist
         timeit(self.s3_client._key_exists, self.s3_dir, self.test_file)
@@ -111,7 +115,7 @@ class BadlyWrittenTestClass(object):
         timeit(self.s3_client.upload_file, self.local_dir, self.s3_dir, self.test_file)
 
         # Test .get_contents(), file exists
-        timeit(self.s3_client.get_contents, self.s3_dir, False)    
+        timeit(self.s3_client.get_contents, self.s3_dir, False)
 
         # Test ._key_exists(), file does not exist
         timeit(self.s3_client._key_exists, self.s3_dir, self.test_file)
@@ -145,7 +149,7 @@ class BadlyWrittenTestClass(object):
         timeit(self.s3_client.upload_file, self.local_dir, self.s3_dir, self.test_file)
 
         # Test .get_contents(), file exists
-        timeit(self.s3_client.get_contents, self.s3_dir, False)    
+        timeit(self.s3_client.get_contents, self.s3_dir, False)
 
         # Test ._key_exists(), file exists
         timeit(self.s3_client._key_exists, self.s3_dir, self.test_file)
